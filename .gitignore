@@ -1,0 +1,11 @@
+/.idea/
+/cmake-build-*/
+/classes/
+/err.txt
+/test.kts
+*.class
+*.jar
+*.dll
+*.so
+
+/src/java/jni_functions.h
