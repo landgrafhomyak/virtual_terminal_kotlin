@@ -201,3 +201,142 @@ Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1getStdoutFd__
     }
     return (jlong) hIn;
 }
+
+
+
+/*
+ * Class: io.github.landgrafhomyak.virtual_terminal.SystemTerminal
+ * Method name: _poll
+ * Method signature: (JLio.github.landgrafhomyak.virtual/terminal.SystemTerminalCallbacks;)V
+ */
+JNIEXPORT void JNICALL
+Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1poll__JLio_github_landgrafhomyak_virtual_1terminal_SystemTerminalCallbacks_2
+        (JNIEnv *env, jobject self, jlong raw_handle, jobject _callbacks_o)
+{
+    HANDLE hIn = (HANDLE) raw_handle;
+    struct
+    {
+        jclass cls;
+        jmethodID constructor;
+        jfieldID is_intercepted_field;
+        jfieldID interception_with_exception_field;
+        jobject instance;
+    } polling_task;
+    struct
+    {
+        jobject instance;
+        jclass cls;
+        jmethodID set_task_method;
+        jmethodID resize_method;
+        jmethodID key_press_method;
+    } callbacks;
+
+    /**********************************************************/
+
+    polling_task.cls = env->FindClass("io/github/landgrafhomyak/virtual_terminal/SystemTerminal$TerminalPollingTask");
+    if (polling_task.cls == nullptr)
+        return;
+    polling_task.constructor = env->GetMethodID(polling_task.cls, "<init>", "(J)V");
+    if (polling_task.constructor == nullptr)
+        return;
+    polling_task.is_intercepted_field = env->GetFieldID(polling_task.cls, "isIntercepted", "Z");
+    if (polling_task.is_intercepted_field == nullptr)
+        return;
+    polling_task.interception_with_exception_field = env->GetFieldID(polling_task.cls, "isInterceptedWithException", "Z");
+    if (polling_task.interception_with_exception_field == nullptr)
+        return;
+
+
+    callbacks.instance = _callbacks_o;
+    callbacks.cls = env->FindClass("io/github/landgrafhomyak/virtual_terminal/SystemTerminalCallbacks");
+    if (callbacks.cls == nullptr)
+        return;
+    callbacks.set_task_method = env->GetMethodID(callbacks.cls, "setPollingTask", "(Lio/github/landgrafhomyak/virtual_terminal/SystemTerminal;Lio/github/landgrafhomyak/virtual_terminal/SystemTerminal$TerminalPollingTask;)V");
+    if (callbacks.set_task_method == nullptr)
+        return;
+    callbacks.resize_method = env->GetMethodID(callbacks.cls, "onTerminalResize", "(Lio/github/landgrafhomyak/virtual_terminal/SystemTerminal;SS)V");
+    if (callbacks.set_task_method == nullptr)
+        return;
+    callbacks.key_press_method = env->GetMethodID(callbacks.cls, "onTerminalKeyPress", "(Lio/github/landgrafhomyak/virtual_terminal/SystemTerminal;CBZZZ)V");
+    if (callbacks.key_press_method == nullptr)
+        return;
+
+    /**********************************************************/
+
+    HANDLE hEvent = CreateEventA(nullptr, true, false, nullptr);
+    if (hEvent == nullptr)
+    {
+        return VirtualTerminalKotlin::format_sys_error_v(env);
+    }
+    else
+    {
+        polling_task.instance = env->NewObject(polling_task.cls, polling_task.constructor, (jlong) hEvent);
+        if (polling_task.instance == nullptr)
+            goto CLOSE_hEvent_AND_RETURN;
+
+        env->CallVoidMethod(callbacks.instance, callbacks.set_task_method, self, polling_task.instance);
+        if (env->ExceptionCheck() == JNI_TRUE)
+            goto CLOSE_hEvent_AND_RETURN;
+
+
+        HANDLE wait_objects[2] = {hEvent, hIn}; // in this order
+        while (true)
+        {
+            CONTINUE_LOOP:
+            switch (WaitForMultipleObjects(2, wait_objects, false, INFINITE))
+            {
+                case WAIT_OBJECT_0:
+                    goto STOP_POLLING;
+                case WAIT_OBJECT_0 + 1:
+                {
+                    static constexpr DWORD MAX_INPUTS_COUNT = 8;
+                    INPUT_RECORD inputs[MAX_INPUTS_COUNT];
+                    DWORD inputs_count;
+                    if (0 == ReadConsoleInputW(hIn, inputs, MAX_INPUTS_COUNT, &inputs_count))
+                    {
+                        VirtualTerminalKotlin::format_sys_error_v(env);
+                        goto CLOSE_hEvent_AND_RETURN;
+                    }
+                    for (DWORD i = 0; i < inputs_count; i++)
+                    {
+                        switch (inputs[i].EventType)
+                        {
+                            case WINDOW_BUFFER_SIZE_EVENT:
+                                env->CallVoidMethod(callbacks.instance, callbacks.resize_method, self, inputs[i].Event.WindowBufferSizeEvent.dwSize.X, inputs[i].Event.WindowBufferSizeEvent.dwSize.Y);
+                                if (env->ExceptionCheck() == JNI_TRUE)
+                                    goto CLOSE_hEvent_AND_RETURN;
+
+                            case KEY_EVENT:;
+                                if (inputs[i].Event.KeyEvent.bKeyDown)
+                                {
+                                    env->CallVoidMethod(
+                                            callbacks.instance,
+                                            callbacks.key_press_method,
+                                            self,
+                                            (jchar) inputs[i].Event.KeyEvent.uChar.UnicodeChar,
+                                            (jbyte) inputs[i].Event.KeyEvent.wVirtualKeyCode,
+                                            (inputs[i].Event.KeyEvent.dwControlKeyState & LEFT_ALT_PRESSED) != 0 || (inputs[i].Event.KeyEvent.dwControlKeyState & RIGHT_ALT_PRESSED) != 0 ? JNI_TRUE : JNI_FALSE,
+                                            (inputs[i].Event.KeyEvent.dwControlKeyState & LEFT_CTRL_PRESSED) != 0 || (inputs[i].Event.KeyEvent.dwControlKeyState & RIGHT_CTRL_PRESSED) != 0 ? JNI_TRUE : JNI_FALSE,
+                                            (inputs[i].Event.KeyEvent.dwControlKeyState & SHIFT_PRESSED) != 0 ? JNI_TRUE : JNI_FALSE
+                                    );
+                                    if (env->ExceptionCheck() == JNI_TRUE)
+                                        goto CLOSE_hEvent_AND_RETURN;
+                                }
+                        }
+                    }
+                    break;
+                }
+                case WAIT_FAILED:
+                    VirtualTerminalKotlin::format_sys_error_v(env);
+                    goto CLOSE_hEvent_AND_RETURN;
+            }
+        }
+    }
+    CLOSE_hEvent_AND_RETURN:
+    CloseHandle(hEvent);
+    return;
+
+    STOP_POLLING:
+    goto CLOSE_hEvent_AND_RETURN;
+
+}

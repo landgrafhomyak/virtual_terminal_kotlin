@@ -48,11 +48,17 @@ actual class SystemTerminal {
         SystemTerminal._print(this.outFd ,"\u001b[?1049l")
     }
 
-    actual class TerminalPollingTask {
-        actual fun stopPolling() {}
+    actual class TerminalPollingTask private constructor(private val eventHandle: Long){
+        private var isIntercepted: Boolean = false
+        private var isInterceptedWithException: Boolean = false
+        actual fun stopPolling(withException:Boolean): Unit = TODO()
     }
 
-    actual fun poll(callbacks: SystemTerminalCallbacks): TerminalPollingTask = TerminalPollingTask()
+    actual fun poll(callbacks: SystemTerminalCallbacks) {
+        this._poll(this.inFd, callbacks)
+    }
+
+    private external fun _poll(inFd: Long, callbacks: SystemTerminalCallbacks)
 
     actual fun flush() {
         SystemTerminal._flush(this.outFd)

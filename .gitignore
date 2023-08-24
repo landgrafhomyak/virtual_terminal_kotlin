@@ -3,6 +3,7 @@
 /classes/
 /err.txt
 /test.kts
+/test.kt
 *.class
 *.jar
 *.dll

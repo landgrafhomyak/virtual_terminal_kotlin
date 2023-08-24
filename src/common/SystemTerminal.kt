@@ -12,10 +12,10 @@ expect class SystemTerminal {
     fun leaveAlternateBuffer()
 
     class TerminalPollingTask {
-        fun stopPolling()
+        fun stopPolling(withException:Boolean = false): Unit
     }
 
-    fun poll(callbacks: SystemTerminalCallbacks): TerminalPollingTask
+    fun poll(callbacks: SystemTerminalCallbacks)
 
 
     fun flush()
