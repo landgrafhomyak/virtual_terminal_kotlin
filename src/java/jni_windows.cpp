@@ -31,12 +31,12 @@ namespace VirtualTerminalKotlin
 
 
 /*
- * Class: io.github.landgrafhomyak.virtual_terminal.SystemTerminal
- * Method name: prepareTerminalStdin
+ * Class: io.github.landgrafhomyak.virtual_terminal.WindowsSystemTerminal
+ * Method name: _prepareTerminalStdin
  * Method signature: (J)J
  */
 JNIEXPORT jlong JNICALL
-Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1prepareTerminalStdin__J
+Java_io_github_landgrafhomyak_virtual_1terminal_WindowsSystemTerminal__1prepareTerminalStdin__J
         (JNIEnv *env, jclass cls, jlong raw_handle)
 {
     HANDLE hIn = (HANDLE) raw_handle;
@@ -49,12 +49,12 @@ Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1prepareTerminal
 }
 
 /*
- * Class: io.github.landgrafhomyak.virtual_terminal.SystemTerminal
- * Method name: prepareTerminalStdout
+ * Class: io.github.landgrafhomyak.virtual_terminal.WindowsSystemTerminal
+ * Method name: _prepareTerminalStdout
  * Method signature: (J)J
  */
 JNIEXPORT jlong JNICALL
-Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1prepareTerminalStdout__J
+Java_io_github_landgrafhomyak_virtual_1terminal_WindowsSystemTerminal__1prepareTerminalStdout__J
         (JNIEnv *env, jclass cls, jlong raw_handle)
 {
     HANDLE hOut = (HANDLE) raw_handle;
@@ -67,12 +67,12 @@ Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1prepareTerminal
 }
 
 /*
- * Class: io.github.landgrafhomyak.virtual_terminal.SystemTerminal
- * Method name: restoreTerminalStdin
+ * Class: io.github.landgrafhomyak.virtual_terminal.WindowsSystemTerminal
+ * Method name: _restoreTerminalStdin
  * Method signature: (JJ)V
  */
 JNIEXPORT void JNICALL
-Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1restoreTerminalStdin__JJ
+Java_io_github_landgrafhomyak_virtual_1terminal_WindowsSystemTerminal__1restoreTerminalStdin__JJ
         (JNIEnv *env, jclass cls, jlong raw_handle, jlong backup_mode)
 {
     HANDLE hIn = (HANDLE) raw_handle;
@@ -81,12 +81,12 @@ Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1restoreTerminal
 }
 
 /*
- * Class: io.github.landgrafhomyak.virtual_terminal.SystemTerminal
- * Method name: restoreTerminalStdout
+ * Class: io.github.landgrafhomyak.virtual_terminal.WindowsSystemTerminal
+ * Method name: _restoreTerminalStdout
  * Method signature: (JJ)V
  */
 JNIEXPORT void JNICALL
-Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1restoreTerminalStdout__JJ
+Java_io_github_landgrafhomyak_virtual_1terminal_WindowsSystemTerminal__1restoreTerminalStdout__JJ
         (JNIEnv *env, jclass cls, jlong raw_handle, jlong backup_mode)
 {
     HANDLE hOut = (HANDLE) raw_handle;
@@ -95,29 +95,68 @@ Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1restoreTerminal
 }
 
 /*
- * Class: io.github.landgrafhomyak.virtual_terminal.SystemTerminal
- * Method name: flush0
+ * Class: io.github.landgrafhomyak.virtual_terminal.WindowsSystemTerminal
+ * Method name: _enterAlternateBuffer
  * Method signature: (J)V
  */
 JNIEXPORT void JNICALL
-Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1flush__J
+Java_io_github_landgrafhomyak_virtual_1terminal_WindowsSystemTerminal__1enterAlternateBuffer__J
         (JNIEnv *env, jclass cls, jlong raw_handle)
 {
-    // windows stdout is unbuffered
-# if 0
     HANDLE hOut = (HANDLE) raw_handle;
-    if (0 == FlushFileBuffers(hOut))
+    if (0 == WriteConsoleW(hOut, "\\x1b[?1049h", 8, nullptr, nullptr))
         return VirtualTerminalKotlin::format_sys_error_v(env);
-# endif
+}
+/*
+ * Class: io.github.landgrafhomyak.virtual_terminal.WindowsSystemTerminal
+ * Method name: _leaveAlternateBuffer
+ * Method signature: (J)V
+ */
+JNIEXPORT void JNICALL
+Java_io_github_landgrafhomyak_virtual_1terminal_WindowsSystemTerminal__1leaveAlternateBuffer__J
+        (JNIEnv *env, jclass cls, jlong raw_handle)
+{
+    HANDLE hOut = (HANDLE) raw_handle;
+    if (0 == WriteConsoleW(hOut, "\\x1b[?1049l", 8, nullptr, nullptr))
+        return VirtualTerminalKotlin::format_sys_error_v(env);
 }
 
+
 /*
- * Class: io.github.landgrafhomyak.virtual_terminal.SystemTerminal
- * Method name: print0
+ * Class: io.github.landgrafhomyak.virtual_terminal.WindowsSystemTerminal
+ * Method name: _createEvent
+ * Method signature: ()J
+ */
+JNIEXPORT jlong JNICALL
+Java_io_github_landgrafhomyak_virtual_1terminal_WindowsSystemTerminal__1createEvent__
+        (JNIEnv *env, jclass cls)
+{
+    HANDLE hEvent = CreateEventA(nullptr, true, false, nullptr);
+    if (hEvent == nullptr)
+        return VirtualTerminalKotlin::format_sys_error(env, 0);
+    return (jlong) hEvent;
+}
+/*
+ * Class: io.github.landgrafhomyak.virtual_terminal.WindowsSystemTerminal
+ * Method name: _destroyEvent
+ * Method signature: (J)V
+ */
+JNIEXPORT void JNICALL
+Java_io_github_landgrafhomyak_virtual_1terminal_WindowsSystemTerminal__1destroyEvent__J
+        (JNIEnv *env, jclass cls, jlong raw_handle)
+{
+    if (0 == CloseHandle((HANDLE) raw_handle))
+        return VirtualTerminalKotlin::format_sys_error_v(env);
+}
+
+
+/*
+ * Class: io.github.landgrafhomyak.virtual_terminal.WindowsSystemTerminal
+ * Method name: _print
  * Method signature: (JC)V
  */
 JNIEXPORT void JNICALL
-Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1print__JC
+Java_io_github_landgrafhomyak_virtual_1terminal_WindowsSystemTerminal__1print__JC
         (JNIEnv *env, jclass cls, jlong raw_handle, jchar chr)
 {
     HANDLE hOut = (HANDLE) raw_handle;
@@ -127,12 +166,12 @@ Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1print__JC
 }
 
 /*
- * Class: io.github.landgrafhomyak.virtual_terminal.SystemTerminal
- * Method name: print0
- * Method signature: (JLjava.lang.String;)V
+ * Class: io.github.landgrafhomyak.virtual_terminal.WindowsSystemTerminal
+ * Method name: _print
+ * Method signature: (JLjava/lang/String;)V
  */
 JNIEXPORT void JNICALL
-Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1print__JLjava_lang_String_2
+Java_io_github_landgrafhomyak_virtual_1terminal_WindowsSystemTerminal__1print__JLjava_lang_String_2
         (JNIEnv *env, jclass cls, jlong raw_handle, jstring str_o)
 {
     HANDLE hOut = (HANDLE) raw_handle;
@@ -151,12 +190,12 @@ Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1print__JLjava_l
 static_assert(sizeof(HANDLE) <= sizeof(jlong), "Can't hold WinApi HANDLE as java long");
 
 /*
- * Class: io.github.landgrafhomyak.virtual_terminal.SystemTerminal
- * Method name: getStdinFd
+ * Class: io.github.landgrafhomyak.virtual_terminal.WindowsSystemTerminal
+ * Method name: _getStdinHandle
  * Method signature: ()J
  */
 JNIEXPORT jlong JNICALL
-Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1getStdinFd__
+Java_io_github_landgrafhomyak_virtual_1terminal_WindowsSystemTerminal__1getStdinHandle__
         (JNIEnv *env, jclass cls)
 {
     jclass ioexception_cls = env->FindClass("java/io/IOException");
@@ -177,12 +216,12 @@ Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1getStdinFd__
 }
 
 /*
- * Class: io.github.landgrafhomyak.virtual_terminal.SystemTerminal
- * Method name: getStdoutFd
+ * Class: io.github.landgrafhomyak.virtual_terminal.WindowsSystemTerminal
+ * Method name: _getStdoutHandle
  * Method signature: ()J
  */
 JNIEXPORT jlong JNICALL
-Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1getStdoutFd__
+Java_io_github_landgrafhomyak_virtual_1terminal_WindowsSystemTerminal__1getStdoutHandle__
         (JNIEnv *env, jclass cls)
 {
     jclass ioexception_cls = env->FindClass("java/io/IOException");
@@ -205,138 +244,83 @@ Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1getStdoutFd__
 
 
 /*
- * Class: io.github.landgrafhomyak.virtual_terminal.SystemTerminal
+ * Class: io.github.landgrafhomyak.virtual_terminal.WindowsSystemTerminal
  * Method name: _poll
- * Method signature: (JLio.github.landgrafhomyak.virtual/terminal.SystemTerminalCallbacks;)V
+ * Method signature: (JJLio/github/landgrafhomyak/virtual_terminal/TerminalCallbacks;)V
  */
 JNIEXPORT void JNICALL
-Java_io_github_landgrafhomyak_virtual_1terminal_SystemTerminal__1poll__JLio_github_landgrafhomyak_virtual_1terminal_SystemTerminalCallbacks_2
-        (JNIEnv *env, jobject self, jlong raw_handle, jobject _callbacks_o)
+Java_io_github_landgrafhomyak_virtual_1terminal_WindowsSystemTerminal__1poll__JJLio_github_landgrafhomyak_virtual_1terminal_TerminalCallbacks_2
+        (JNIEnv *env, jobject self, jlong raw_in_handle, jlong raw_event_handle, jobject _callbacks_o)
 {
-    HANDLE hIn = (HANDLE) raw_handle;
-    struct
-    {
-        jclass cls;
-        jmethodID constructor;
-        jfieldID is_intercepted_field;
-        jfieldID interception_with_exception_field;
-        jobject instance;
-    } polling_task;
+    HANDLE hIn = (HANDLE) raw_in_handle;
+    HANDLE hEvent = (HANDLE) raw_event_handle;
     struct
     {
         jobject instance;
         jclass cls;
-        jmethodID set_task_method;
         jmethodID resize_method;
         jmethodID key_press_method;
     } callbacks;
 
-    /**********************************************************/
-
-    polling_task.cls = env->FindClass("io/github/landgrafhomyak/virtual_terminal/SystemTerminal$TerminalPollingTask");
-    if (polling_task.cls == nullptr)
-        return;
-    polling_task.constructor = env->GetMethodID(polling_task.cls, "<init>", "(J)V");
-    if (polling_task.constructor == nullptr)
-        return;
-    polling_task.is_intercepted_field = env->GetFieldID(polling_task.cls, "isIntercepted", "Z");
-    if (polling_task.is_intercepted_field == nullptr)
-        return;
-    polling_task.interception_with_exception_field = env->GetFieldID(polling_task.cls, "isInterceptedWithException", "Z");
-    if (polling_task.interception_with_exception_field == nullptr)
-        return;
-
-
     callbacks.instance = _callbacks_o;
-    callbacks.cls = env->FindClass("io/github/landgrafhomyak/virtual_terminal/SystemTerminalCallbacks");
+    callbacks.cls = env->FindClass("io/github/landgrafhomyak/virtual_terminal/TerminalCallbacks");
     if (callbacks.cls == nullptr)
         return;
-    callbacks.set_task_method = env->GetMethodID(callbacks.cls, "setPollingTask", "(Lio/github/landgrafhomyak/virtual_terminal/SystemTerminal;Lio/github/landgrafhomyak/virtual_terminal/SystemTerminal$TerminalPollingTask;)V");
-    if (callbacks.set_task_method == nullptr)
+    callbacks.resize_method = env->GetMethodID(callbacks.cls, "onTerminalResize", "(Lio/github/landgrafhomyak/virtual_terminal/Terminal;SS)V");
+    if (callbacks.resize_method == nullptr)
         return;
-    callbacks.resize_method = env->GetMethodID(callbacks.cls, "onTerminalResize", "(Lio/github/landgrafhomyak/virtual_terminal/SystemTerminal;SS)V");
-    if (callbacks.set_task_method == nullptr)
-        return;
-    callbacks.key_press_method = env->GetMethodID(callbacks.cls, "onTerminalKeyPress", "(Lio/github/landgrafhomyak/virtual_terminal/SystemTerminal;CBZZZ)V");
+    callbacks.key_press_method = env->GetMethodID(callbacks.cls, "onTerminalKeyPress", "(Lio/github/landgrafhomyak/virtual_terminal/Terminal;CBZZZ)V");
     if (callbacks.key_press_method == nullptr)
         return;
 
-    /**********************************************************/
-
-    HANDLE hEvent = CreateEventA(nullptr, true, false, nullptr);
-    if (hEvent == nullptr)
+    HANDLE wait_objects[2] = {hEvent, hIn}; // in this order
+    while (true)
     {
-        return VirtualTerminalKotlin::format_sys_error_v(env);
-    }
-    else
-    {
-        polling_task.instance = env->NewObject(polling_task.cls, polling_task.constructor, (jlong) hEvent);
-        if (polling_task.instance == nullptr)
-            goto CLOSE_hEvent_AND_RETURN;
-
-        env->CallVoidMethod(callbacks.instance, callbacks.set_task_method, self, polling_task.instance);
-        if (env->ExceptionCheck() == JNI_TRUE)
-            goto CLOSE_hEvent_AND_RETURN;
-
-
-        HANDLE wait_objects[2] = {hEvent, hIn}; // in this order
-        while (true)
+        CONTINUE_LOOP:
+        switch (WaitForMultipleObjects(2, wait_objects, false, INFINITE))
         {
-            CONTINUE_LOOP:
-            switch (WaitForMultipleObjects(2, wait_objects, false, INFINITE))
+            case WAIT_OBJECT_0:
+                return;
+            case WAIT_OBJECT_0 + 1:
             {
-                case WAIT_OBJECT_0:
-                    goto STOP_POLLING;
-                case WAIT_OBJECT_0 + 1:
+                static constexpr DWORD MAX_INPUTS_COUNT = 8;
+                INPUT_RECORD inputs[MAX_INPUTS_COUNT];
+                DWORD inputs_count;
+                if (0 == ReadConsoleInputW(hIn, inputs, MAX_INPUTS_COUNT, &inputs_count))
                 {
-                    static constexpr DWORD MAX_INPUTS_COUNT = 8;
-                    INPUT_RECORD inputs[MAX_INPUTS_COUNT];
-                    DWORD inputs_count;
-                    if (0 == ReadConsoleInputW(hIn, inputs, MAX_INPUTS_COUNT, &inputs_count))
-                    {
-                        VirtualTerminalKotlin::format_sys_error_v(env);
-                        goto CLOSE_hEvent_AND_RETURN;
-                    }
-                    for (DWORD i = 0; i < inputs_count; i++)
-                    {
-                        switch (inputs[i].EventType)
-                        {
-                            case WINDOW_BUFFER_SIZE_EVENT:
-                                env->CallVoidMethod(callbacks.instance, callbacks.resize_method, self, inputs[i].Event.WindowBufferSizeEvent.dwSize.X, inputs[i].Event.WindowBufferSizeEvent.dwSize.Y);
-                                if (env->ExceptionCheck() == JNI_TRUE)
-                                    goto CLOSE_hEvent_AND_RETURN;
-
-                            case KEY_EVENT:;
-                                if (inputs[i].Event.KeyEvent.bKeyDown)
-                                {
-                                    env->CallVoidMethod(
-                                            callbacks.instance,
-                                            callbacks.key_press_method,
-                                            self,
-                                            (jchar) inputs[i].Event.KeyEvent.uChar.UnicodeChar,
-                                            (jbyte) inputs[i].Event.KeyEvent.wVirtualKeyCode,
-                                            (inputs[i].Event.KeyEvent.dwControlKeyState & LEFT_ALT_PRESSED) != 0 || (inputs[i].Event.KeyEvent.dwControlKeyState & RIGHT_ALT_PRESSED) != 0 ? JNI_TRUE : JNI_FALSE,
-                                            (inputs[i].Event.KeyEvent.dwControlKeyState & LEFT_CTRL_PRESSED) != 0 || (inputs[i].Event.KeyEvent.dwControlKeyState & RIGHT_CTRL_PRESSED) != 0 ? JNI_TRUE : JNI_FALSE,
-                                            (inputs[i].Event.KeyEvent.dwControlKeyState & SHIFT_PRESSED) != 0 ? JNI_TRUE : JNI_FALSE
-                                    );
-                                    if (env->ExceptionCheck() == JNI_TRUE)
-                                        goto CLOSE_hEvent_AND_RETURN;
-                                }
-                        }
-                    }
-                    break;
+                    return VirtualTerminalKotlin::format_sys_error_v(env);
                 }
-                case WAIT_FAILED:
-                    VirtualTerminalKotlin::format_sys_error_v(env);
-                    goto CLOSE_hEvent_AND_RETURN;
+                for (DWORD i = 0; i < inputs_count; i++)
+                {
+                    switch (inputs[i].EventType)
+                    {
+                        case WINDOW_BUFFER_SIZE_EVENT:
+                            env->CallVoidMethod(callbacks.instance, callbacks.resize_method, self, inputs[i].Event.WindowBufferSizeEvent.dwSize.X, inputs[i].Event.WindowBufferSizeEvent.dwSize.Y);
+                            if (env->ExceptionCheck() == JNI_TRUE)
+                                return;
+
+                        case KEY_EVENT:;
+                            if (inputs[i].Event.KeyEvent.bKeyDown)
+                            {
+                                env->CallVoidMethod(
+                                        callbacks.instance,
+                                        callbacks.key_press_method,
+                                        self,
+                                        (jchar) inputs[i].Event.KeyEvent.uChar.UnicodeChar,
+                                        (jbyte) inputs[i].Event.KeyEvent.wVirtualKeyCode,
+                                        (inputs[i].Event.KeyEvent.dwControlKeyState & LEFT_ALT_PRESSED) != 0 || (inputs[i].Event.KeyEvent.dwControlKeyState & RIGHT_ALT_PRESSED) != 0 ? JNI_TRUE : JNI_FALSE,
+                                        (inputs[i].Event.KeyEvent.dwControlKeyState & LEFT_CTRL_PRESSED) != 0 || (inputs[i].Event.KeyEvent.dwControlKeyState & RIGHT_CTRL_PRESSED) != 0 ? JNI_TRUE : JNI_FALSE,
+                                        (inputs[i].Event.KeyEvent.dwControlKeyState & SHIFT_PRESSED) != 0 ? JNI_TRUE : JNI_FALSE
+                                );
+                                if (env->ExceptionCheck() == JNI_TRUE)
+                                    return;
+                            }
+                    }
+                }
+                break;
             }
+            case WAIT_FAILED:
+                return VirtualTerminalKotlin::format_sys_error_v(env);
         }
     }
-    CLOSE_hEvent_AND_RETURN:
-    CloseHandle(hEvent);
-    return;
-
-    STOP_POLLING:
-    goto CLOSE_hEvent_AND_RETURN;
-
 }
